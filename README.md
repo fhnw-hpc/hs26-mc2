@@ -49,6 +49,9 @@ Before starting, familiarize yourself with the following topics:
 * Slurm introduction and tutorial: allocations, job scripts, resource requests, submission, monitoring, and job output.
 * Computation graphs and profiling: CPU time, GPU time, asynchronous execution, memory, and kernel launches.
 
+The starting point for background reading is in the `background/background.pdf`. 
+It contains links and references for further background materials.
+
 ## 4. Instructions for assignment
 
 ### General instructions

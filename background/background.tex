@@ -486,6 +486,10 @@ $Q$ of shape $(8,4,64,32)$, and $A$ of shape $(8,4,64,64)$.
 Softmax normalizes each of the $8\cdot4\cdot64$ rows of length $64$.
 Mixing heads or images into that normalization would compute a different model.
 
+\textbf{More reading on transformers.} The classic blog post by Jay Alammar is a great resource for understanding transformers \cite{alammar2018illustrated}.
+I recommend to watch the videos and read the blog post to get a good understanding of the architecture and how it works.
+
+
 \checkpoint{Given $D=192$ and $h=6$, what is the scale? Why must head
 outputs be transposed back to $(B,N,h,d)$ before merging their last two axes?}
 
