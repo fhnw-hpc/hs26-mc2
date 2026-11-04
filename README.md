@@ -12,7 +12,7 @@ By completing the challenge, you should be able to:
 * Run reproducible CPU and GPU experiments, including HPC training jobs submitted through Slurm.
 * Connect a computation graph to operator timings, GPU kernels, memory use, and GPU idle periods.
 * Distinguish the performance of attention, a training step, and the complete input and training pipeline.
-* Explain the effects of batch size, compilation, attention backends, data-loader processes, and synchronization.
+* Explain the effects of batch size, compilation, attention backends, and data-loader processes.
 * Measure profiling overhead and distinguish diagnostic measurements from representative training performance.
 * Track experiments and compare performance alongside learning behaviour.
 
@@ -28,10 +28,10 @@ Set up the following components:
 * **Torchview:** forward computation graphs with tensor shapes. Install Graphviz where required for rendering.
 * **TorchLens:** operation-level graph inspection and metadata. Record its version and check what the available capture and timing modes measure.
 * **PyTorch Profiler:** CPU/GPU operator and kernel traces, input shapes, and memory information. Export traces for viewing, for example in Perfetto.
-* **Weights & Biases (W&B):** configurations, training metrics, and system utilization. If compute nodes cannot reach the service, record offline and synchronize afterwards.
+* **Weights & Biases (W&B, optional):** configurations, training metrics, and system utilization for Optional Experiment 1. If compute nodes cannot reach the service, record offline and synchronize afterwards.
 * **Places365-Standard:** the 256 x 256 image version, with 365 scene classes. Configure the shared dataset path through an environment variable or command-line argument. Use `torchvision.datasets.Places365` with `small=True` and `download=False` after the shared copy is prepared.
 
-Use a small, reproducible subset for development and CPU experiments, and the full training split for the final GPU training experiment.
+Use a small, reproducible subset for development and the required experiments. Use the full training split for Optional Experiment 1.
 Keep the validation split separate from training.
 Store checkpoints, measurements, graphs, and traces in your own output directory.
 
@@ -60,7 +60,9 @@ Implement training and measurement code as Python scripts that run locally and t
 Use a **report notebook** to load saved measurements, collate results, create plots and tables, and explain your findings.
 Its figures should be reproducible without rerunning long GPU jobs.
 
-Each step below is an experiment. For every experiment:
+**Experiments 1–8 are required. Optional Experiments 1–3 are extensions.**
+
+For every experiment you undertake:
 
 1. **Implement and run:** state the question and your prediction, implement the necessary functions, and record the commands or job configuration used.
 2. **Present observations:** include a configuration table and the requested plots/tables, with units, labels, and variability. Associate graphs and traces with their runs.
@@ -83,6 +85,7 @@ Disable stochastic transformations when checking numerical equivalence, so rando
 * Warm up before measuring steady-state performance. Report startup, compilation, and worker initialization separately when relevant.
 * Repeat short benchmark measurements at least three times. Report a central value and variability, such as mean and standard deviation, and the number of measured steps and images. Full training jobs need not be repeated three times; report variability across their measurement windows separately.
 * GPU execution is asynchronous. Use CUDA events for suitable device intervals or synchronize at the boundaries of a wall-clock measurement window. Avoid synchronization after every operation.
+* Call `loss.item()` only every 10 or more training steps. More frequent calls can force CPU/GPU synchronization and degrade performance. Accumulate detached metrics on the device between logging intervals.
 * Measure throughput over many steps without graph capture. Take separate short profiler traces to explain it; do not profile the entire training run.
 * Distinguish CPU self time, CPU inclusive time, and GPU time. Nested timings and overlapping work cannot be summed as disjoint elapsed times.
 * Report peak allocated GPU memory separately from reserved memory and sampled system statistics. Reset peak statistics at a documented boundary.
@@ -90,7 +93,7 @@ Disable stochastic transformations when checking numerical equivalence, so rando
 
 #### Required precision and implementations
 
-All required experiments use **FP32 model parameters and floating-point inputs, no autocast/mixed precision, and highest float32 matrix-multiplication precision**:
+All required experiments and Optional Experiment 1 use **FP32 model parameters and floating-point inputs, no autocast/mixed precision, and highest float32 matrix-multiplication precision**:
 
 ```python
 torch.set_float32_matmul_precision("highest")
@@ -98,7 +101,7 @@ torch.set_float32_matmul_precision("highest")
 
 Record these settings and keep them identical across required comparisons.
 If you use convolutions, also disable their TF32 mode using the controls supported by your PyTorch version.
-Reduced precision belongs to Advanced Goal 1.
+Reduced precision belongs to Optional Experiment 2.
 
 | Implementation | Attention calculation | Compilation | Precision |
 | --- | --- | --- | --- |
@@ -287,32 +290,13 @@ Does a small worker count leave the GPU waiting? When do more workers stop helpi
 Distinguish file access, decoding, CPU contention, queueing, and transfers; do not assume all loading time is disk I/O.
 How can the model graph remain unchanged while total throughput changes substantially?
 
-### Experiment 9: Accidental synchronization
-
-**Implement and run**
-
-1. Compare two or three fixed-workload GPU runs: no per-step host extraction, `loss.item()` each step, and extraction at a larger interval.
-2. Keep loss computation and updates identical. Accumulate detached metrics where necessary without retaining autograd graphs.
-3. Keep console/network output outside the comparison or measure it separately, isolating scalar extraction from output overhead.
-4. Measure throughput over windows and capture a short trace per variant.
-
-**Plots and tables**
-
-* Throughput and step-time variability versus extraction frequency.
-* Trace excerpts locating synchronization and changes in CPU/GPU overlap.
-
-**Reflection**
-
-Why can reading one scalar affect execution? Does time attributed to `.item()` include waiting for earlier work?
-Why might the impact depend on workload size?
-
-### Experiment 10: Full training and W&B comparison
+### Optional Experiment 1: Full training and W&B comparison
 
 **Implement and run**
 
 1. Submit separate full-dataset training jobs for manual eager attention, compiled manual attention, and your fastest supported FP32 SDPA backend.
 2. Keep model, batch size, loader, optimizer, initial weights, and data-order seed identical. Choose a feasible common budget covering at least one complete training epoch per configuration; evaluate on the validation split.
-3. Disable graph capture and continuous profiling. Log metrics at a reasonable interval using what you learned about synchronization.
+3. Disable graph capture and continuous profiling. Log training metrics every 10 or more steps, following the `loss.item()` guidance in the measurement protocol.
 4. Record loss, validation accuracy, throughput, elapsed time, peak allocated GPU memory, CPU/GPU utilization, and available system memory statistics in W&B. Include configurations, Slurm job IDs, and versions.
 
 **Plots and tables**
@@ -327,7 +311,7 @@ Do short benchmarks predict complete training performance? Which bottleneck domi
 Does faster execution preserve comparable learning, allowing for floating-point differences?
 Explain why sampled utilization or allocated memory alone does not establish efficiency.
 
-### Optional Advanced Goal 1: Mixed precision and Tensor Cores
+### Optional Experiment 2: Mixed precision and Tensor Cores
 
 **Implement and run**
 
@@ -346,7 +330,7 @@ Explain why sampled utilization or allocated memory alone does not establish eff
 How much improvement comes from precision and how much from a newly available backend?
 What roles do memory traffic, hardware support, numerical range, and gradient scaling play?
 
-### Optional Advanced Goal 2: DDP on two and four GPUs
+### Optional Experiment 3: DDP on two and four GPUs
 
 **Implement and run**
 
@@ -371,8 +355,8 @@ Why does weak scaling's changing global batch prevent a claim of identical optim
 
 ### Submission and final reflection
 
-Submit implementation code, environment specification, Slurm scripts, the report notebook, and measurements needed to regenerate its figures.
-Include representative graphs/traces or accessible artifact links and the W&B comparisons.
+Submit implementation code, environment specification, Slurm scripts, the report notebook, and measurements needed to regenerate its figures for all eight required experiments and any optional experiments you undertake.
+Include representative graphs/traces or accessible artifact links. Include the W&B comparisons if you complete Optional Experiment 1.
 Do not commit the dataset or large generated artifacts to Git.
 
 Finish with a reflection on the realization of the mini-challenge.
