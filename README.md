@@ -71,7 +71,7 @@ If no transition or slowdown appears within your resource limits, explain that f
 Keep image resolution, patch size, patch count, embedding dimension, head count, and model depth fixed after selecting the baseline.
 **Do not perform a patch-count sweep.**
 Use identical initialization/checkpoints and input batches for direct implementation comparisons, and record random seeds.
-Disable stochastic transformations and dropout when checking numerical equivalence, so random changes do not obscure implementation errors.
+Disable stochastic transformations when checking numerical equivalence, so random changes do not obscure implementation errors.
 
 #### Measurement protocol
 
@@ -128,7 +128,7 @@ The math backend and automatic selection are reference configurations; they may 
    You may start with loops, but produce a vectorized version for the main experiments.
    Do not use `nn.MultiheadAttention`, SDPA, or compilation for this baseline.
    PyTorch supplies differentiation; writing CUDA kernels or backward functions is not required.
-4. Implement loss, backward propagation, optimizer updates, validation, and checkpoint saving. Disable attention dropout for controlled implementation comparisons.
+4. Implement loss, backward propagation, optimizer updates, validation, and checkpoint saving.
 5. Run a small CPU development experiment. Check finite losses/gradients and demonstrate learning, for example by overfitting a tiny training subset before evaluating held-out images.
 
 **Plots and tables**
@@ -243,7 +243,7 @@ Explain any workload where compilation does not help.
 
 **Implement and run**
 
-1. Replace only the attention calculation with `torch.nn.functional.scaled_dot_product_attention` (SDPA). Preserve projections, shapes, scaling, non-causal attention, and `dropout_p=0.0`.
+1. Replace only the attention calculation with `torch.nn.functional.scaled_dot_product_attention` (SDPA). Preserve projections, shapes, scaling, and attention over all image patches.
 2. Compare outputs and input/parameter gradients with the manual implementation before benchmarking.
 3. Inspect math, FlashAttention, memory-efficient, and cuDNN backend availability. Request individual backends using `torch.nn.attention.sdpa_kernel`; capture diagnostics for unsupported combinations.
 4. Without compilation or mixed precision, benchmark automatic selection, math, and up to two additional supported backends. Record requested and observed backends; do not count silent fallback as a different implementation.
