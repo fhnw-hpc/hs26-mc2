@@ -57,8 +57,11 @@ It contains links and references for further background materials.
 ### General instructions
 
 Implement training and measurement code as Python scripts that run locally and through Slurm.
-Use a **report notebook** to load saved measurements, collate results, create plots and tables, and explain your findings.
+Use a **report notebooks** to load saved measurements, collate results, create plots and tables, and explain your findings.
+For each Experiment, I suggest to create a separate Jupyter notebook. 
 Its figures should be reproducible without rerunning long GPU jobs.
+See the [Spaces](https://spaces.informatik.fhnw.ch/spaces/high-performance-computing/aufgaben) page for submission deadlines.
+You can re-use code from the background reading materials.
 
 **Experiments 1–8 are required. Optional Experiments 1–3 are extensions.**
 
